@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: aspc-web-app
+    env: python
+    rootDir: ASPC
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --worker-class eventlet -w 1 app:app
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: SIMULATION_MODE
+        value: "True"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MQTT_BROKER
+        value: "localhost" # Cần cập nhật nếu có broker thực tế
+      - key: MQTT_PORT
+        value: "8883"
