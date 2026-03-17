@@ -3,12 +3,17 @@ import pandas as pd
 import os
 import threading
 import joblib
-from tensorflow.keras.models import load_model, Sequential
-from tensorflow.keras.layers import LSTM, Dense, Input, Dropout
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.losses import Huber
+try:
+    from tensorflow.keras.models import load_model, Sequential
+    from tensorflow.keras.layers import LSTM, Dense, Input, Dropout
+    from tensorflow.keras.callbacks import EarlyStopping
+    from tensorflow.keras.losses import Huber
+    HAS_TF = True
+except ImportError:
+    HAS_TF = False
+
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score # [MỚI] Thư viện chấm điểm
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 class SolarLSTM:
     def __init__(self, model_path='model_multivariate.h5', data_file='solar_data_multi.csv', scaler_file='scaler.pkl'):
@@ -47,6 +52,11 @@ class SolarLSTM:
             self.scaler = MinMaxScaler(feature_range=(0, 1))
 
     def load_ai_model(self):
+        if not HAS_TF:
+            print("ℹ️ TensorFlow không được cài đặt. Chạy chế độ không có AI.")
+            self.model = None
+            return
+
         if os.path.exists(self.model_path):
             try:
                 self.model = load_model(self.model_path, custom_objects={'Huber': Huber})
@@ -82,6 +92,7 @@ class SolarLSTM:
 
     # [MỚI] Hàm chuyên dụng để chấm điểm mô hình
     def evaluate_model(self, X_test, y_test):
+        if not self.model: return
         try:
             # 1. Dự báo thử trên tập Test
             y_pred_scaled = self.model.predict(X_test, verbose=0)
@@ -143,6 +154,10 @@ class SolarLSTM:
             X_train, X_test = X[:split_idx], X[split_idx:]
             y_train, y_test = y[:split_idx], y[split_idx:]
 
+            if not HAS_TF:
+                print("⚠️ Không thể retrain vì thiếu TensorFlow.")
+                return
+
             if self.model is None:
                 self.model = Sequential()
                 self.model.add(Input(shape=(self.window_size, self.num_features)))
@@ -154,7 +169,6 @@ class SolarLSTM:
                 self.model.add(Dense(1)) 
                 
                 # [MẸO 2] Dùng Huber Loss thay cho MSE 
-                # Huber chịu nhiễu tốt hơn (nếu cảm biến thỉnh thoảng bị gai)
                 self.model.compile(optimizer='adam', loss=Huber())
             
             early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
@@ -205,7 +219,7 @@ class SolarLSTM:
         return {
             "current_temp": round(current_temp_real, 2),
             "pred_temp_5min": round(pred_temp_5min, 2),
-            "accuracy_mae": self.last_metrics["mae"] # Trả về sai số để hiển thị lên Web nếu cần
+            "accuracy_mae": self.last_metrics["mae"] 
         }
 
     def predict_scenario(self, pump_action):
