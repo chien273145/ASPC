@@ -22,7 +22,7 @@ from optimizer import SolarOptimizer
 
 # --- CẤU HÌNH ---
 DB_NAME = "aspc_history.db"
-SIMULATION_MODE = os.getenv("SIMULATION_MODE", "False").lower() == "true"
+SIMULATION_MODE = os.getenv("SIMULATION_MODE", "True").lower() == "true"
 # MQTT CẤU HÌNH KẾT NỐI (đọc từ biến môi trường)
 BROKER = os.getenv("MQTT_BROKER", "localhost")
 PORT = int(os.getenv("MQTT_PORT", "8883"))
